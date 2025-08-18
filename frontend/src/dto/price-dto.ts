@@ -1,4 +1,4 @@
-export class Dto {
+export class PriceDto {
     id?: string;
     firma?: string;
     ulke?: string;
