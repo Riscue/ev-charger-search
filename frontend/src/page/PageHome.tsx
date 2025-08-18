@@ -1,13 +1,17 @@
 import React, {useEffect, useState} from 'react';
 import changeTitle from "../hooks/change-title";
 import Box from "@mui/material/Box";
-import {Autocomplete, Chip, Container, Stack, TextField} from "@mui/material";
+import {Autocomplete, Chip, Container, Slider, Stack, TextField} from "@mui/material";
 import {Cell, CustomTable, SortOrder} from "../components/shared/CustomTable";
 import {PriceDto} from "../dto/price-dto";
 import {PriceAPI} from "../service/KategoriAPI";
 import {NumberUtils} from "../utils/number-utils";
 import {useNavigate, useParams} from "react-router-dom";
 import {Delete} from "@mui/icons-material";
+import Button from "@mui/material/Button";
+import {SearchDto} from "../dto/search-dto";
+
+export type Socket = 'AC' | 'DC' | 'ALL';
 
 export default function PageHome() {
     changeTitle("Ana Sayfa");
@@ -22,8 +26,10 @@ export default function PageHome() {
     const [inputValue, setInputValue] = React.useState('');
 
     const [filters, setFilters] = useState<string[]>([]);
-    const [orderBy, setOrderBy] = useState<string>("dcFiyat");
-    const [order, setOrder] = useState<SortOrder>("asc");
+    const [sortField, setSortField] = useState<string>("dcFiyat");
+    const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
+    const [priceRange, setPriceRange] = React.useState<number[]>([0, 20]);
+    const [socket, setSocket] = React.useState<Socket>("ALL");
 
     const [initComplete, setInitComplete] = useState<boolean>(false);
 
@@ -36,10 +42,12 @@ export default function PageHome() {
 
     useEffect(() => {
         if (shortId) {
-            PriceAPI.getSearchData(shortId).then((data) => {
-                setFilters(data.filters);
-                setOrderBy(data.orderBy);
-                setOrder(data.order);
+            PriceAPI.getSearchData(shortId).then((data: SearchDto) => {
+                setFilters(data.criteria);
+                setSortField(data.sortField);
+                setSortOrder(data.sortOrder);
+                setPriceRange([data.priceMin, data.priceMax]);
+                setSocket(data.socket);
             }).catch(() => {
                 navigate("/");
             });
@@ -53,12 +61,48 @@ export default function PageHome() {
     }, [priceList]);
 
     useEffect(() => {
-        if (filters && filters.length) {
-            setFilteredRows(priceList.filter(value => filters.includes(value.firma)));
+        if (priceList) {
+            let tempList = structuredClone(priceList);
+            if (filters && filters.length) {
+                tempList = tempList.filter(value => filters.includes(value.firma))
+            }
+            if (priceRange) {
+                tempList = tempList.filter(value => (socket != 'DC' && priceRange[0] < value.ac && value.ac < priceRange[1]) || (socket != 'AC' && priceRange[0] < value.dc && value.dc < priceRange[1]))
+            }
+            setFilteredRows(tempList);
         } else {
-            setFilteredRows(priceList);
+            setFilteredRows([]);
         }
-    }, [priceList, filters]);
+    }, [priceList, filters, priceRange, socket]);
+
+    function save() {
+        if ((filters && filters.length) || (priceRange[0] > 0 || priceRange[1] < 20) || (socket != 'ALL')) {
+            PriceAPI.save(filters, sortField, sortOrder, priceRange, socket).then((data) => {
+                navigate(`/s/${data}`);
+            });
+        }
+    }
+
+    function clear() {
+        navigate("/");
+    }
+
+    function handleRequestSort(sortField: string, sortOrder: SortOrder) {
+        setSortField(sortField);
+        setSortOrder(sortOrder);
+    }
+
+    function handleChange(event: Event, newValue: number[]) {
+        setPriceRange([Math.round(newValue[0] * 10) / 10, Math.round(newValue[1] * 10) / 10]);
+    }
+
+    function handleSocketChange() {
+        setSocket(socket === 'ALL' ? 'DC' : socket === 'DC' ? 'AC' : 'ALL')
+    }
+
+    function formatPriceRangeLabel(value: number) {
+        return `${value}₺`;
+    }
 
     const priceListCells: Cell[] = [
         {
@@ -68,21 +112,31 @@ export default function PageHome() {
         },
         {
             label: 'AC Fiyat',
-            field: 'acFiyat',
-            getReactElement: row => <>{NumberUtils.formatMoney(row.acFiyat)}</>,
+            field: 'ac',
+            getReactElement: row => <>{NumberUtils.formatMoney(row.ac)}</>,
             sort: true,
         },
         {
             label: 'DC Fiyat',
-            field: 'dcFiyat',
-            getReactElement: row => <>{NumberUtils.formatMoney(row.dcFiyat)}</>,
+            field: 'dc',
+            getReactElement: row => <>{NumberUtils.formatMoney(row.dc)}</>,
             sort: true,
         },
     ];
 
     return (
         <Container maxWidth={false}>
-            <Box sx={{width: 1, p: 2}}>
+            <Box sx={{width: 1, p: 2, mt: 5}}>
+                <Button value="check" onClick={handleSocketChange}>{socket}</Button>
+                <Slider
+                    value={priceRange}
+                    onChange={handleChange}
+                    valueLabelDisplay="on"
+                    step={0.1}
+                    min={0}
+                    max={20}
+                    valueLabelFormat={formatPriceRangeLabel}
+                />
                 <Autocomplete
                     value={value}
                     onChange={(event: any, newValue: string | null) => {
@@ -114,12 +168,18 @@ export default function PageHome() {
                             onDelete={() => setFilters(structuredClone(filters).filter(r => r !== rule))}/>
                     ))}
                 </Stack>
+
+                <Box>
+                    <Button variant="outlined" type="button" onClick={() => save()}>Kaydet</Button>
+                    <Button variant="outlined" type="button" onClick={() => clear()}>Temizle</Button>
+                </Box>
             </Box>
             <Box sx={{width: 1, p: 2}}>
                 <CustomTable
                     cells={priceListCells}
-                    defaultOrderBy={orderBy}
-                    defaultOrder={order}
+                    sortField={sortField}
+                    sortOrder={sortOrder}
+                    handleRequestSort={handleRequestSort}
                     rows={initComplete && filteredRows}
                     rowId={row => row.id}
                 />

@@ -13,8 +13,8 @@ export default function App(props: { disableCustomTheme?: boolean }) {
             <ScrollTopOnNavigation/>
 
             <Routes>
-                <Route path="/" element={<PageHome/>}/>
-                <Route path="/s/:shortId" element={<PageHome/>}/>
+                <Route path="/" element={<PageHome key="home"/>}/>
+                <Route path="/s/:shortId" element={<PageHome key="search"/>}/>
             </Routes>
             <Box sx={{mt: 6}}/>
         </AppTheme>

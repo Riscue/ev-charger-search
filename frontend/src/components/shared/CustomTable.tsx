@@ -22,7 +22,7 @@ function getReactElement(cell: Cell, row: any): ReactElement {
     return cell.getReactElement ? cell.getReactElement(row) : getValue(cell, row);
 }
 
-function descendingComparator(order: SortOrder, a: any, b: any, cell: Cell): number {
+function descendingComparator(sortOrder: SortOrder, a: any, b: any, cell: Cell): number {
     const aElement = getValue(cell, a);
     const bElement = getValue(cell, b);
 
@@ -31,18 +31,18 @@ function descendingComparator(order: SortOrder, a: any, b: any, cell: Cell): num
     } else if ((aElement !== undefined && aElement !== null) && (bElement === undefined || bElement === null)) {
         return -1;
     } else if (typeof aElement === 'number' && typeof bElement === 'number') {
-        return order === "desc" ? bElement - aElement : aElement - bElement;
+        return sortOrder === "desc" ? bElement - aElement : aElement - bElement;
     } else if (typeof aElement === 'string' && typeof bElement === 'string') {
-        return order === "desc" ? aElement.localeCompare(bElement) : bElement.localeCompare(aElement);
+        return sortOrder === "desc" ? aElement.localeCompare(bElement) : bElement.localeCompare(aElement);
     } else if (aElement instanceof Date && bElement instanceof Date) {
-        return order === "desc" ? bElement.getTime() - aElement.getTime() : aElement.getTime() - bElement.getTime();
+        return sortOrder === "desc" ? bElement.getTime() - aElement.getTime() : aElement.getTime() - bElement.getTime();
     } else {
         return 0;
     }
 }
 
-function getComparator(order: SortOrder, cell: Cell): (a: any, b: any) => number {
-    return (a, b) => descendingComparator(order, a, b, cell);
+function getComparator(sortOrder: SortOrder, cell: Cell): (a: any, b: any) => number {
+    return (a, b) => descendingComparator(sortOrder, a, b, cell);
 }
 
 interface Cell {
@@ -58,17 +58,17 @@ interface Cell {
 }
 
 interface EnhancedTableHeadProps {
-    onRequestSort: (event: React.MouseEvent<unknown>, property: string) => void;
-    order: SortOrder;
-    orderBy: string | undefined;
     cells: Cell[];
+    sortField: string | undefined;
+    sortOrder: SortOrder;
+    onRequestSort: (event: React.MouseEvent<unknown>, property: string) => void;
 }
 
 function EnhancedTableHead({
-                               order,
-                               orderBy,
-                               onRequestSort,
                                cells,
+                               sortField,
+                               sortOrder,
+                               onRequestSort,
                            }: EnhancedTableHeadProps) {
     const createSortHandler = (property: string) => (event: React.MouseEvent<unknown>) => {
         onRequestSort(event, property);
@@ -86,8 +86,9 @@ function EnhancedTableHead({
                             style={cell.style}
                         >
                             <TableSortLabel
-                                active={orderBy === cell.field}
-                                direction={orderBy === cell.field ? order : 'asc'}
+                                sx={{fontWeight: 'bold'}}
+                                active={sortField === cell.field}
+                                direction={sortField === cell.field ? sortOrder : 'asc'}
                                 onClick={createSortHandler(cell.field)}
                             >
                                 {cell.label}
@@ -135,8 +136,9 @@ function EnhancedTableToolbar({caption}: { caption: string }) {
 interface CustomTableProps {
     id?: string;
     cells: Cell[];
-    defaultOrder: SortOrder;
-    defaultOrderBy: string;
+    sortField: string;
+    sortOrder: SortOrder;
+    handleRequestSort: (sortField: string, sortOrder: SortOrder) => void;
     rows: any[] | undefined;
     rowId: (row: any) => any;
 
@@ -150,8 +152,9 @@ interface CustomTableProps {
 function CustomTable({
                          id,
                          cells,
-                         defaultOrder,
-                         defaultOrderBy,
+                         sortField,
+                         sortOrder,
+                         handleRequestSort,
                          rows,
                          rowId,
                          totalRow = undefined,
@@ -160,15 +163,12 @@ function CustomTable({
                          pagination = false,
                          spinner = <LinearProgress color="inherit"/>,
                      }: CustomTableProps) {
-    const [order, setOrder] = useState<SortOrder>(defaultOrder);
-    const [orderBy, setOrderBy] = useState<string | undefined>(defaultOrderBy);
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
 
-    const handleRequestSort = (event: React.MouseEvent<unknown>, property: string) => {
-        const newOrder = orderBy === property && order === 'asc' ? 'desc' : 'asc';
-        setOrder(newOrder);
-        setOrderBy(property);
+    const onRequestSort = (event: React.MouseEvent<unknown>, property: string) => {
+        const newOrder = sortField === property && sortOrder === 'asc' ? 'desc' : 'asc';
+        handleRequestSort(property, newOrder);
     };
 
     const handleChangePage = (event: unknown, newPage: number) => {
@@ -187,9 +187,9 @@ function CustomTable({
         () => {
             let result = [...(rows || [])];
 
-            const cell = cells.find(cell => cell.field === orderBy);
+            const cell = cells.find(cell => cell.field === sortField);
             result = cell ?
-                result.sort(getComparator(order, cell)) :
+                result.sort(getComparator(sortOrder, cell)) :
                 result;
 
             result = pagination && rowsPerPage > 0 ?
@@ -200,7 +200,7 @@ function CustomTable({
 
             return result;
         },
-        [order, orderBy, page, rowsPerPage, rows],
+        [sortOrder, sortField, page, rowsPerPage, rows],
     );
 
     return (
@@ -216,9 +216,9 @@ function CustomTable({
                         size="small"
                     >
                         <EnhancedTableHead
-                            order={order}
-                            orderBy={orderBy}
-                            onRequestSort={handleRequestSort}
+                            sortOrder={sortOrder}
+                            sortField={sortField}
+                            onRequestSort={onRequestSort}
                             cells={cells}
                         />
                         <TableBody>

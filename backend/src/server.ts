@@ -2,14 +2,12 @@ import express from "express";
 import bodyParser from "body-parser";
 import sqlite3 from "sqlite3";
 import {open} from "sqlite";
-import cors from "cors";
 import fetch from "node-fetch";
 import {nanoid} from "nanoid";
 import {PriceDto} from "./price-dto";
 import {AppResponse} from "./app-response";
 
 const app = express();
-app.use(cors());
 app.use(bodyParser.json());
 
 let db: any;
@@ -22,24 +20,30 @@ const CACHE_DURATION = 24 * 60 * 60 * 1000;
 async function getApiData() {
     const now = Date.now();
     if (cachedData.length && now - lastFetchTime < CACHE_DURATION) {
-        return cachedData;
+        return cachedData.sort(() => Math.random() - 0.5);
     }
 
     console.info("Send Request to Remote API")
     const res = await fetch("https://evccost.com/api.php");
     if (!res.ok) {
         console.error("API fetch hatası");
-        return cachedData;
+        return cachedData.sort(() => Math.random() - 0.5);
     }
 
     const apiData = await res.json() as any;
     if (apiData.success !== true) {
-        return cachedData;
+        return cachedData.sort(() => Math.random() - 0.5);
     }
 
-    cachedData = apiData.data as PriceDto[];
+    cachedData = apiData.data.map((row: any) => {
+        return {
+            name: row.firma,
+            ac: row.acFiyat,
+            dc: row.dcFiyat,
+        } as PriceDto
+    });
     lastFetchTime = now;
-    return cachedData;
+    return cachedData.sort(() => Math.random() - 0.5);
 }
 
 async function initDb() {
@@ -51,52 +55,22 @@ async function initDb() {
     await db.exec(`
         CREATE TABLE IF NOT EXISTS searches
         (
-            id
-            INTEGER
-            PRIMARY
-            KEY
-            AUTOINCREMENT,
-            short_id
-            TEXT
-            UNIQUE
-            NOT
-            NULL,
-            criteria
-            TEXT
-            NOT
-            NULL,
-            visibility
-            INTEGER
-            DEFAULT
-            1,
-            created_at
-            DATETIME
-            DEFAULT
-            CURRENT_TIMESTAMP
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            short_id TEXT UNIQUE NOT NULL,
+            criteria TEXT NOT NULL,
+            sort_field TEXT NOT NULL,
+            sort_order TEXT NOT NULL,
+            price_min DOUBLE NOT NULL,
+            price_max DOUBLE NOT NULL,
+            socket TEXT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     `);
 }
 
 app.get("/api/data", async (req, res) => {
     try {
-        const {filter, sortBy, order} = req.query as any;
-
-        let filtered = await getApiData();
-        if (filter) {
-            filtered = filtered.filter((d: any) =>
-                d.name.toLowerCase().includes(filter.toLowerCase())
-            );
-        }
-
-        if (sortBy) {
-            filtered = filtered.sort((a: any, b: any) => {
-                if (a[sortBy] < b[sortBy]) return order === "desc" ? 1 : -1;
-                if (a[sortBy] > b[sortBy]) return order === "desc" ? -1 : 1;
-                return 0;
-            });
-        }
-
-        res.json(AppResponse.success(filtered));
+        res.json(AppResponse.success(await getApiData()));
     } catch (err: any) {
         res.status(400).json(AppResponse.error(err.message));
     }
@@ -108,17 +82,21 @@ app.get("/api/searches", async (_req, res) => {
 });
 
 app.post("/api/searches", async (req, res) => {
-    const {criteria, visibility} = req.body;
+    const {criteria, sortField, sortOrder, priceMin, priceMax, socket} = req.body;
     const shortId = nanoid(6);
 
     await db.run(
-        "INSERT INTO searches (short_id, criteria, visibility) VALUES (?, ?, ?)",
+        "INSERT INTO searches (short_id, criteria, sort_field, sort_order, price_min, price_max, socket) VALUES (?, ?, ?, ?, ?, ?, ?)",
         shortId,
         JSON.stringify(criteria),
-        visibility ? 1 : 0
+        sortField,
+        sortOrder,
+        priceMin,
+        priceMax,
+        socket
     );
 
-    res.json(AppResponse.success({shortId}));
+    res.json(AppResponse.success(shortId));
 });
 
 app.get("/api/searches/:shortId", async (req, res) => {
@@ -128,7 +106,14 @@ app.get("/api/searches/:shortId", async (req, res) => {
     );
     if (!row) return res.status(400).json(AppResponse.error("Not found"));
 
-    res.json(AppResponse.success({criteria: JSON.parse(row.criteria), visibility: row.visibility}));
+    res.json(AppResponse.success({
+        criteria: JSON.parse(row.criteria),
+        sortField: row.sort_field,
+        sortOrder: row.sort_order,
+        priceMin: row.price_min,
+        priceMax: row.price_max,
+        socket: row.socket,
+    }));
 });
 
 initDb().then(() => {
