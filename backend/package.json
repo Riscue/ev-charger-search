@@ -1,0 +1,28 @@
+{
+  "name": "ev-charger-search-backend",
+  "version": "1.0.0",
+  "description": "EV Charger Search",
+  "author": "İbrahim Akyel <ibrahim@ibrahimakyel.com>",
+  "main": "server.js",
+  "scripts": {
+    "build": "npx tsc",
+    "start": "concurrently \"npx tsc --watch\" \"nodemon -q dist/server.js\""
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "nanoid": "^5.1.5",
+    "node-fetch": "^3.3.2",
+    "sqlite": "^5.1.1",
+    "sqlite3": "^5.1.7"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.3.0",
+    "concurrently": "^9.2.0",
+    "nodemon": "^3.1.10",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.2"
+  }
+}
