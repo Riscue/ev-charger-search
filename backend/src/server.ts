@@ -6,12 +6,13 @@ import fetch from "node-fetch";
 import {nanoid} from "nanoid";
 import {PriceDto} from "./price-dto";
 import {AppResponse} from "./app-response";
+import path from "path";
 
 const app = express();
 app.use(bodyParser.json());
 
 let db: any;
-const PORT = 4000;
+const PORT = process.env.PORT || 4000;
 
 let cachedData: PriceDto[] = [];
 let lastFetchTime = 0;
@@ -55,20 +56,52 @@ async function initDb() {
     await db.exec(`
         CREATE TABLE IF NOT EXISTS searches
         (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            short_id TEXT UNIQUE NOT NULL,
-            criteria TEXT NOT NULL,
-            sort_field TEXT NOT NULL,
-            sort_order TEXT NOT NULL,
-            price_min DOUBLE NOT NULL,
-            price_max DOUBLE NOT NULL,
-            socket TEXT NOT NULL,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            id
+            INTEGER
+            PRIMARY
+            KEY
+            AUTOINCREMENT,
+            short_id
+            TEXT
+            UNIQUE
+            NOT
+            NULL,
+            criteria
+            TEXT
+            NOT
+            NULL,
+            sort_field
+            TEXT
+            NOT
+            NULL,
+            sort_order
+            TEXT
+            NOT
+            NULL,
+            price_min
+            DOUBLE
+            NOT
+            NULL,
+            price_max
+            DOUBLE
+            NOT
+            NULL,
+            socket
+            TEXT
+            NOT
+            NULL,
+            created_at
+            DATETIME
+            DEFAULT
+            CURRENT_TIMESTAMP
         )
     `);
 }
 
-app.get("/api/data", async (req, res) => {
+
+const router = express.Router();
+
+router.get("/data", async (req, res) => {
     try {
         res.json(AppResponse.success(await getApiData()));
     } catch (err: any) {
@@ -76,12 +109,7 @@ app.get("/api/data", async (req, res) => {
     }
 });
 
-app.get("/api/searches", async (_req, res) => {
-    const rows = await db.all("SELECT * FROM searches");
-    res.json(AppResponse.success(rows.map((r: { criteria: string; }) => ({...r, criteria: JSON.parse(r.criteria)}))));
-});
-
-app.post("/api/searches", async (req, res) => {
+router.post("/searches", async (req, res) => {
     const {criteria, sortField, sortOrder, priceMin, priceMax, socket} = req.body;
     const shortId = nanoid(6);
 
@@ -99,7 +127,7 @@ app.post("/api/searches", async (req, res) => {
     res.json(AppResponse.success(shortId));
 });
 
-app.get("/api/searches/:shortId", async (req, res) => {
+router.get("/searches/:shortId", async (req, res) => {
     const row = await db.get(
         "SELECT * FROM searches WHERE short_id = ?",
         req.params.shortId
@@ -114,6 +142,20 @@ app.get("/api/searches/:shortId", async (req, res) => {
         priceMax: row.price_max,
         socket: row.socket,
     }));
+});
+
+app.use("/api", router);
+
+app.use("/static", express.static(path.join(__dirname, "frontend/static")));
+
+app.get("/", (_req, res) => {
+    res.sendFile(path.join(__dirname, "frontend/index.html"));
+});
+app.get("/index.html", (_req, res) => {
+    res.sendFile(path.join(__dirname, "frontend/index.html"));
+});
+app.get("/s/*", (_req, res) => {
+    res.sendFile(path.join(__dirname, "frontend/index.html"));
 });
 
 initDb().then(() => {

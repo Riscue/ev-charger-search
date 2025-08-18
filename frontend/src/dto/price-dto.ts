@@ -1,5 +1,5 @@
 export class PriceDto {
-    firma?: string;
+    name?: string;
     ac?: number;
     dc?: number;
 }

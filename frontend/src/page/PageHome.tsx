@@ -35,7 +35,7 @@ export default function PageHome() {
 
     useEffect(() => {
         PriceAPI.getList().then(data => {
-            setOptions(data.map(value => value.firma));
+            setOptions(data.map(value => value.name));
             setPriceList(data);
         });
     }, []);
@@ -64,7 +64,7 @@ export default function PageHome() {
         if (priceList) {
             let tempList = structuredClone(priceList);
             if (filters && filters.length) {
-                tempList = tempList.filter(value => filters.includes(value.firma))
+                tempList = tempList.filter(value => filters.includes(value.name))
             }
             if (priceRange) {
                 tempList = tempList.filter(value => (socket != 'DC' && priceRange[0] < value.ac && value.ac < priceRange[1]) || (socket != 'AC' && priceRange[0] < value.dc && value.dc < priceRange[1]))
@@ -107,7 +107,7 @@ export default function PageHome() {
     const priceListCells: Cell[] = [
         {
             label: 'Firma',
-            field: 'firma',
+            field: 'name',
             sort: true,
         },
         {

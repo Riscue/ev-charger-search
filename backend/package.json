@@ -5,8 +5,8 @@
   "author": "İbrahim Akyel <ibrahim@ibrahimakyel.com>",
   "main": "server.js",
   "scripts": {
-    "build": "npx tsc",
-    "start": "concurrently \"npx tsc --watch\" \"nodemon -q dist/server.js\""
+    "build": "GENERATE_SOURCEMAP=false npx tsc",
+    "start": "concurrently \"npx tsc --watch\" \"nodemon -q build/server.js\""
   },
   "dependencies": {
     "express": "^5.1.0",
