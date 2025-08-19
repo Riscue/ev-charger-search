@@ -31,6 +31,7 @@ async function initDb() {
         (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             short_id TEXT UNIQUE NOT NULL,
+            name TEXT,
             criteria TEXT NOT NULL,
             sort_field TEXT NOT NULL,
             sort_order TEXT NOT NULL,
@@ -86,12 +87,13 @@ router.get("/data", async (req, res) => {
 });
 
 router.post("/searches", async (req, res) => {
-    const {criteria, sortField, sortOrder, priceMin, priceMax, socket} = req.body;
-    const shortId = nanoid(6);
+    const {name, criteria, sortField, sortOrder, priceMin, priceMax, socket} = req.body;
+    const shortId = nanoid(8);
 
     await db.run(
-        "INSERT INTO searches (short_id, criteria, sort_field, sort_order, price_min, price_max, socket) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO searches (short_id, name, criteria, sort_field, sort_order, price_min, price_max, socket) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         shortId,
+        name,
         JSON.stringify(criteria),
         sortField,
         sortOrder,
@@ -111,6 +113,8 @@ router.get("/searches/:shortId", async (req, res) => {
     if (!row) return res.status(400).json(AppResponse.error("Not found"));
 
     res.json(AppResponse.success({
+        name: row.name,
+        shortId: req.params.shortId,
         criteria: JSON.parse(row.criteria),
         sortField: row.sort_field,
         sortOrder: row.sort_order,

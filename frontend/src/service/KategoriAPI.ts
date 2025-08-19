@@ -18,12 +18,13 @@ export const PriceAPI = {
             throw: true,
         });
     },
-    save: async function (options: string[], sortField: string, sortOrder: SortOrder, priceRange: number[], socket: Socket): Promise<string> {
+    save: async function (name: string, options: string[], sortField: string, sortOrder: SortOrder, priceRange: number[], socket: Socket): Promise<string> {
         return await request({
             url: `/searches`,
             method: "POST",
             throw: true,
             data: {
+                name: name,
                 criteria: options,
                 sortField: sortField,
                 sortOrder: sortOrder,

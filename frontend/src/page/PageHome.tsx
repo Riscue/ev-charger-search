@@ -1,7 +1,6 @@
 import React, {useEffect, useState} from 'react';
-import changeTitle from "../hooks/change-title";
 import Box from "@mui/material/Box";
-import {Autocomplete, Chip, Container, Slider, Stack, TextField} from "@mui/material";
+import {Autocomplete, Chip, Container, Slider, TextField} from "@mui/material";
 import {Cell, CustomTable, SortOrder} from "../components/shared/CustomTable";
 import {PriceDto} from "../dto/price-dto";
 import {PriceAPI} from "../service/KategoriAPI";
@@ -10,11 +9,11 @@ import {useNavigate, useParams} from "react-router-dom";
 import {Delete} from "@mui/icons-material";
 import Button from "@mui/material/Button";
 import {SearchDto} from "../dto/search-dto";
+import {TITLE_POSTFIX} from "../utils/constants";
 
 export type Socket = 'AC' | 'DC' | 'ALL';
 
 export default function PageHome() {
-    changeTitle("Ana Sayfa");
     const navigate = useNavigate();
     const {shortId} = useParams<{ shortId?: string }>();
 
@@ -25,6 +24,7 @@ export default function PageHome() {
     const [value, setValue] = React.useState<string | null>(null);
     const [inputValue, setInputValue] = React.useState('');
 
+    const [name, setName] = useState<string>('');
     const [filters, setFilters] = useState<string[]>([]);
     const [sortField, setSortField] = useState<string>("dcFiyat");
     const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
@@ -43,6 +43,8 @@ export default function PageHome() {
     useEffect(() => {
         if (shortId) {
             PriceAPI.getSearchData(shortId).then((data: SearchDto) => {
+                document.title = `${data.name || data.shortId} | ${TITLE_POSTFIX}`;
+                setName(data.name || '');
                 setFilters(data.criteria);
                 setSortField(data.sortField);
                 setSortOrder(data.sortOrder);
@@ -63,7 +65,7 @@ export default function PageHome() {
     useEffect(() => {
         if (priceList) {
             let tempList = structuredClone(priceList);
-            if (filters && filters.length) {
+            if (filters?.length) {
                 tempList = tempList.filter(value => filters.includes(value.name))
             }
             if (priceRange) {
@@ -76,8 +78,8 @@ export default function PageHome() {
     }, [priceList, filters, priceRange, socket]);
 
     function save() {
-        if ((filters && filters.length) || (priceRange[0] > 0 || priceRange[1] < 20) || (socket != 'ALL')) {
-            PriceAPI.save(filters, sortField, sortOrder, priceRange, socket).then((data) => {
+        if (filters?.length || (priceRange[0] > 0 || priceRange[1] < 20) || socket != 'ALL') {
+            PriceAPI.save(name, filters, sortField, sortOrder, priceRange, socket).then((data) => {
                 navigate(`/s/${data}`);
             });
         }
@@ -154,7 +156,8 @@ export default function PageHome() {
                     }}
                     id="controllable-states-demo"
                     options={options}
-                    renderInput={(params) => <TextField {...params} label="Firma Listesi"/>}
+                    renderInput={(params) => <TextField {...params}
+                                                        label={filters.length ? `${filters.length} adet firma seçildi` : 'Firma Listesi'}/>}
                 />
                 <Box sx={{width: 1, my: 1}}>
                     {filters.map((rule) => (
@@ -171,6 +174,13 @@ export default function PageHome() {
                 </Box>
 
                 <Box>
+                    <TextField
+                        label="İsim"
+                        value={name}
+                        onChange={(event) => setName(event.target.value)}/>
+                </Box>
+
+                <Box sx={{mt: 1}}>
                     <Button variant="outlined" type="button" onClick={() => save()}>Kaydet</Button>
                     <Button variant="outlined" type="button" onClick={() => clear()}>Temizle</Button>
                 </Box>

@@ -3,6 +3,7 @@ import {Socket} from "../page/PageHome";
 
 export class SearchDto {
     shortId?: string;
+    name?: string;
     criteria?: string[];
     sortField?: string;
     sortOrder?: SortOrder;
