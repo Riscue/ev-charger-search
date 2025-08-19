@@ -36,8 +36,9 @@ async function getApiData() {
         return cachedData.sort(() => Math.random() - 0.5);
     }
 
-    cachedData = apiData.data.map((row: any) => {
+    cachedData = apiData.data.map((row: any, index: number) => {
         return {
+            id: Math.round(Math.random() * 1000000),
             name: row.firma,
             ac: row.acFiyat,
             dc: row.dcFiyat,
@@ -56,44 +57,15 @@ async function initDb() {
     await db.exec(`
         CREATE TABLE IF NOT EXISTS searches
         (
-            id
-            INTEGER
-            PRIMARY
-            KEY
-            AUTOINCREMENT,
-            short_id
-            TEXT
-            UNIQUE
-            NOT
-            NULL,
-            criteria
-            TEXT
-            NOT
-            NULL,
-            sort_field
-            TEXT
-            NOT
-            NULL,
-            sort_order
-            TEXT
-            NOT
-            NULL,
-            price_min
-            DOUBLE
-            NOT
-            NULL,
-            price_max
-            DOUBLE
-            NOT
-            NULL,
-            socket
-            TEXT
-            NOT
-            NULL,
-            created_at
-            DATETIME
-            DEFAULT
-            CURRENT_TIMESTAMP
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            short_id TEXT UNIQUE NOT NULL,
+            criteria TEXT NOT NULL,
+            sort_field TEXT NOT NULL,
+            sort_order TEXT NOT NULL,
+            price_min DOUBLE NOT NULL,
+            price_max DOUBLE NOT NULL,
+            socket TEXT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     `);
 }
@@ -148,13 +120,7 @@ app.use("/api", router);
 
 app.use("/static", express.static(path.join(__dirname, "frontend/static")));
 
-app.get("/", (_req, res) => {
-    res.sendFile(path.join(__dirname, "frontend/index.html"));
-});
-app.get("/index.html", (_req, res) => {
-    res.sendFile(path.join(__dirname, "frontend/index.html"));
-});
-app.get("/s/*", (_req, res) => {
+app.get(/.*/, (_req, res) => {
     res.sendFile(path.join(__dirname, "frontend/index.html"));
 });
 
