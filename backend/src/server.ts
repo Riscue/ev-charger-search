@@ -11,6 +11,9 @@ import path from "path";
 import {Database} from "sqlite/build/Database";
 
 const PORT = process.env.PORT || 4000;
+const DB_FILE = process.env.DB_FILE || "./data.db";
+const CACHE_DURATION = process.env.CACHE_DURATION ? parseInt(process.env.CACHE_DURATION) : 24 * 60 * 60 * 1000;
+const REMOTE_API_URL = process.env.REMOTE_API_URL || "https://evccost.com/api.php";
 
 const app = express();
 app.use(bodyParser.json());
@@ -19,7 +22,7 @@ let db: Database;
 
 async function initDb() {
     db = await open({
-        filename: "./data.db",
+        filename: DB_FILE,
         driver: sqlite3.Database,
     });
 
@@ -41,7 +44,6 @@ async function initDb() {
 
 let cachedData: PriceDto[] = [];
 let lastFetchTime = 0;
-const CACHE_DURATION = 24 * 60 * 60 * 1000;
 
 async function getApiData() {
     const now = Date.now();
@@ -50,7 +52,7 @@ async function getApiData() {
     }
 
     console.info("Send Request to Remote API")
-    const res = await fetch("https://evccost.com/api.php");
+    const res = await fetch(REMOTE_API_URL);
     if (!res.ok) {
         console.error("API fetch hatası");
         return cachedData.sort(() => Math.random() - 0.5);
