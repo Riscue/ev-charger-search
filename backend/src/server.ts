@@ -6,13 +6,38 @@ import fetch from "node-fetch";
 import {nanoid} from "nanoid";
 import {PriceDto} from "./price-dto";
 import {AppResponse} from "./app-response";
+import process from 'process';
 import path from "path";
+import {Database} from "sqlite/build/Database";
+
+const PORT = process.env.PORT || 4000;
 
 const app = express();
 app.use(bodyParser.json());
 
-let db: any;
-const PORT = process.env.PORT || 4000;
+let db: Database;
+
+async function initDb() {
+    db = await open({
+        filename: "./data.db",
+        driver: sqlite3.Database,
+    });
+
+    await db.exec(`
+        CREATE TABLE IF NOT EXISTS searches
+        (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            short_id TEXT UNIQUE NOT NULL,
+            criteria TEXT NOT NULL,
+            sort_field TEXT NOT NULL,
+            sort_order TEXT NOT NULL,
+            price_min DOUBLE NOT NULL,
+            price_max DOUBLE NOT NULL,
+            socket TEXT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+}
 
 let cachedData: PriceDto[] = [];
 let lastFetchTime = 0;
@@ -47,29 +72,6 @@ async function getApiData() {
     lastFetchTime = now;
     return cachedData.sort(() => Math.random() - 0.5);
 }
-
-async function initDb() {
-    db = await open({
-        filename: "./data.db",
-        driver: sqlite3.Database,
-    });
-
-    await db.exec(`
-        CREATE TABLE IF NOT EXISTS searches
-        (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            short_id TEXT UNIQUE NOT NULL,
-            criteria TEXT NOT NULL,
-            sort_field TEXT NOT NULL,
-            sort_order TEXT NOT NULL,
-            price_min DOUBLE NOT NULL,
-            price_max DOUBLE NOT NULL,
-            socket TEXT NOT NULL,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    `);
-}
-
 
 const router = express.Router();
 
@@ -122,6 +124,12 @@ app.use("/static", express.static(path.join(__dirname, "frontend/static")));
 
 app.get(/.*/, (_req, res) => {
     res.sendFile(path.join(__dirname, "frontend/index.html"));
+});
+
+process.on('SIGINT', () => {
+    console.info("Stopping Server");
+    db.close().then();
+    process.exit(0);
 });
 
 initDb().then(() => {
