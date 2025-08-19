@@ -156,9 +156,10 @@ export default function PageHome() {
                     options={options}
                     renderInput={(params) => <TextField {...params} label="Firma Listesi"/>}
                 />
-                <Stack spacing={1} sx={{p: 1}}>
+                <Box sx={{width: 1, my: 1}}>
                     {filters.map((rule) => (
                         <Chip
+                            sx={{m: .2}}
                             key={rule}
                             label={rule}
                             color="primary"
@@ -167,7 +168,7 @@ export default function PageHome() {
                             deleteIcon={<Delete/>}
                             onDelete={() => setFilters(structuredClone(filters).filter(r => r !== rule))}/>
                     ))}
-                </Stack>
+                </Box>
 
                 <Box>
                     <Button variant="outlined" type="button" onClick={() => save()}>Kaydet</Button>
