@@ -1,15 +1,16 @@
 import React, {useEffect, useState} from 'react';
 import Box from "@mui/material/Box";
-import {Autocomplete, Chip, Container, Slider, TextField} from "@mui/material";
+import {Accordion, AccordionDetails, AccordionSummary, Autocomplete, Chip, Container, Slider, TextField} from "@mui/material";
 import {Cell, CustomTable, SortOrder} from "../components/shared/CustomTable";
 import {PriceDto} from "../dto/price-dto";
 import {PriceAPI} from "../service/KategoriAPI";
 import {NumberUtils} from "../utils/number-utils";
 import {useNavigate, useParams} from "react-router-dom";
-import {Delete} from "@mui/icons-material";
+import {Delete, ExpandMore} from "@mui/icons-material";
 import Button from "@mui/material/Button";
 import {SearchDto} from "../dto/search-dto";
 import {TITLE_POSTFIX} from "../utils/constants";
+import Typography from "@mui/material/Typography";
 
 export type Socket = 'AC' | 'DC' | 'ALL';
 
@@ -26,10 +27,12 @@ export default function PageHome() {
 
     const [name, setName] = useState<string>('');
     const [filters, setFilters] = useState<string[]>([]);
-    const [sortField, setSortField] = useState<string>("dcFiyat");
+    const [sortField, setSortField] = useState<string>("dc");
     const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
     const [priceRange, setPriceRange] = React.useState<number[]>([0, 20]);
     const [socket, setSocket] = React.useState<Socket>("ALL");
+
+    const [expanded, setExpanded] = React.useState<boolean>(false);
 
     const [initComplete, setInitComplete] = useState<boolean>(false);
 
@@ -53,6 +56,8 @@ export default function PageHome() {
             }).catch(() => {
                 navigate("/");
             });
+        } else {
+            setExpanded(true);
         }
     }, [shortId]);
 
@@ -68,8 +73,11 @@ export default function PageHome() {
             if (filters?.length) {
                 tempList = tempList.filter(value => filters.includes(value.name))
             }
+            if (socket) {
+                tempList = tempList.filter(value => (socket != 'DC' && value.ac) || (socket != 'AC' && value.dc))
+            }
             if (priceRange) {
-                tempList = tempList.filter(value => (socket != 'DC' && priceRange[0] < value.ac && value.ac < priceRange[1]) || (socket != 'AC' && priceRange[0] < value.dc && value.dc < priceRange[1]))
+                tempList = tempList.filter(value => (socket != 'DC' && priceRange[0] <= value.ac && value.ac <= priceRange[1]) || (socket != 'AC' && priceRange[0] <= value.dc && value.dc <= priceRange[1]))
             }
             setFilteredRows(tempList);
         } else {
@@ -86,7 +94,16 @@ export default function PageHome() {
     }
 
     function clear() {
-        navigate("/");
+        if (shortId) {
+            navigate("/");
+        } else {
+            setName("");
+            setFilters([]);
+            setSortField(undefined);
+            setSortOrder("asc");
+            setPriceRange([0, 20]);
+            setSocket("ALL");
+        }
     }
 
     function handleRequestSort(sortField: string, sortOrder: SortOrder) {
@@ -104,6 +121,41 @@ export default function PageHome() {
 
     function formatPriceRangeLabel(value: number) {
         return `${value}₺`;
+    }
+
+    function filtreToText() {
+        const parts: string[] = [];
+
+        if (filters.length > 0) {
+            parts.push(`${filters.length} firma seçildi`);
+        }
+
+        if (sortField) {
+            const sortLabel =
+                sortField === "dc"
+                    ? "DC Fiyat"
+                    : sortField === "ac"
+                        ? "AC Fiyat"
+                        : "İsim";
+            const orderLabel = sortOrder === "asc" ? "Düşükten Yükseğe" : "Yüksekten Düşüğe";
+            parts.push(`Sıralama: ${sortLabel} (${orderLabel})`);
+        }
+
+        if (priceRange.length === 2) {
+            if (priceRange[0] == 0 && priceRange[1] != 20) {
+                parts.push(`Fiyat <= ${priceRange[1]}`);
+            } else if (priceRange[0] != 0 && priceRange[1] == 20) {
+                parts.push(`${priceRange[0]} <= Fiyat`);
+            } else if (priceRange[0] != 0 && priceRange[1] != 20) {
+                parts.push(`${priceRange[0]} <= Fiyat <= ${priceRange[1]}`);
+            }
+        }
+
+        if (socket !== "ALL") {
+            parts.push(`Soket: ${socket}`);
+        }
+
+        return parts.join(" | ");
     }
 
     const priceListCells: Cell[] = [
@@ -129,61 +181,75 @@ export default function PageHome() {
     return (
         <Container maxWidth={false}>
             <Box sx={{width: 1, p: 2, mt: 5}}>
-                <Button value="check" onClick={handleSocketChange}>{socket}</Button>
-                <Slider
-                    value={priceRange}
-                    onChange={handleChange}
-                    valueLabelDisplay="on"
-                    step={0.1}
-                    min={0}
-                    max={20}
-                    valueLabelFormat={formatPriceRangeLabel}
-                />
-                <Autocomplete
-                    value={value}
-                    onChange={(event: any, newValue: string | null) => {
-                        if (!filters.includes(newValue)) {
-                            const newFilters = structuredClone(filters);
-                            newFilters.push(newValue);
-                            setFilters(newFilters);
-                        }
-                        setValue(null);
-                        setInputValue('');
-                    }}
-                    inputValue={inputValue}
-                    onInputChange={(event, newInputValue) => {
-                        setInputValue(newInputValue);
-                    }}
-                    id="controllable-states-demo"
-                    options={options}
-                    renderInput={(params) => <TextField {...params}
-                                                        label={filters.length ? `${filters.length} adet firma seçildi` : 'Firma Listesi'}/>}
-                />
-                <Box sx={{width: 1, my: 1}}>
-                    {filters.map((rule) => (
-                        <Chip
-                            sx={{m: .2}}
-                            key={rule}
-                            label={rule}
-                            color="primary"
-                            size="medium"
-                            variant="outlined"
-                            deleteIcon={<Delete/>}
-                            onDelete={() => setFilters(structuredClone(filters).filter(r => r !== rule))}/>
-                    ))}
-                </Box>
+                <Accordion expanded={expanded} onChange={() => setExpanded(!expanded)}>
+                    <AccordionSummary
+                        expandIcon={<ExpandMore/>}
+                        aria-controls="panel1bh-content"
+                        id="panel1bh-header"
+                    >
+                        <Typography sx={{width: '33%'}}>Filtre</Typography>
+                        <Typography sx={{color: 'text.secondary'}}>
+                            {filtreToText()}
+                        </Typography>
+                    </AccordionSummary>
+                    <AccordionDetails>
+                        <Button value="check" onClick={handleSocketChange}>Soket: {socket}</Button>
+                        <Slider
+                            value={priceRange}
+                            onChange={handleChange}
+                            valueLabelDisplay="auto"
+                            step={0.1}
+                            min={0}
+                            max={20}
+                            valueLabelFormat={formatPriceRangeLabel}
+                        />
+                        <Autocomplete
+                            value={value}
+                            onChange={(event: any, newValue: string | null) => {
+                                if (!filters.includes(newValue)) {
+                                    const newFilters = structuredClone(filters);
+                                    newFilters.push(newValue);
+                                    setFilters(newFilters);
+                                }
+                                setValue(null);
+                                setInputValue('');
+                            }}
+                            inputValue={inputValue}
+                            onInputChange={(event, newInputValue) => {
+                                setInputValue(newInputValue);
+                            }}
+                            id="controllable-states-demo"
+                            options={options}
+                            renderInput={(params) => <TextField {...params}
+                                                                label={filters.length ? `${filters.length} adet firma seçildi` : 'Firma Listesi'}/>}
+                        />
+                        <Box sx={{width: 1, my: 1}}>
+                            {filters.map((rule) => (
+                                <Chip
+                                    sx={{m: .2}}
+                                    key={rule}
+                                    label={rule}
+                                    color="primary"
+                                    size="medium"
+                                    variant="outlined"
+                                    deleteIcon={<Delete/>}
+                                    onDelete={() => setFilters(structuredClone(filters).filter(r => r !== rule))}/>
+                            ))}
+                        </Box>
 
-                <Box>
-                    <TextField
-                        label="İsim"
-                        value={name}
-                        onChange={(event) => setName(event.target.value)}/>
-                </Box>
+                        <Box>
+                            <TextField
+                                label="İsim"
+                                value={name}
+                                onChange={(event) => setName(event.target.value)}/>
+                        </Box>
 
-                <Box sx={{mt: 1}}>
-                    <Button variant="outlined" type="button" onClick={() => save()}>Kaydet</Button>
-                    <Button variant="outlined" type="button" onClick={() => clear()}>Temizle</Button>
-                </Box>
+                        <Box sx={{mt: 1}}>
+                            <Button variant="outlined" type="button" onClick={() => save()}>Kaydet</Button>
+                            <Button variant="outlined" type="button" onClick={() => clear()}>Temizle</Button>
+                        </Box>
+                    </AccordionDetails>
+                </Accordion>
             </Box>
             <Box sx={{width: 1, p: 2}}>
                 <CustomTable
