@@ -20,6 +20,7 @@ export default function PageHome() {
 
     const [priceList, setPriceList] = useState<PriceDto[]>();
     const [filteredRows, setFilteredRows] = useState<PriceDto[]>();
+    const [priceTotal, setPriceTotal] = useState<PriceDto>();
 
     const [options, setOptions] = useState<string[]>([]);
     const [value, setValue] = React.useState<string | null>(null);
@@ -27,7 +28,7 @@ export default function PageHome() {
 
     const [name, setName] = useState<string>('');
     const [filters, setFilters] = useState<string[]>([]);
-    const [sortField, setSortField] = useState<string>("dc");
+    const [sortField, setSortField] = useState<string>();
     const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
     const [priceRange, setPriceRange] = React.useState<number[]>([0, 20]);
     const [socket, setSocket] = React.useState<Socket>("ALL");
@@ -80,8 +81,10 @@ export default function PageHome() {
                 tempList = tempList.filter(value => (socket != 'DC' && priceRange[0] <= value.ac && value.ac <= priceRange[1]) || (socket != 'AC' && priceRange[0] <= value.dc && value.dc <= priceRange[1]))
             }
             setFilteredRows(tempList);
+            setPriceTotal({name: `${tempList.length} firma bulundu`} as PriceDto)
         } else {
             setFilteredRows([]);
+            setPriceTotal({name: `${0} firma bulundu`} as PriceDto)
         }
     }, [priceList, filters, priceRange, socket]);
 
@@ -130,15 +133,8 @@ export default function PageHome() {
             parts.push(`${filters.length} firma seçildi`);
         }
 
-        if (sortField) {
-            const sortLabel =
-                sortField === "dc"
-                    ? "DC Fiyat"
-                    : sortField === "ac"
-                        ? "AC Fiyat"
-                        : "İsim";
-            const orderLabel = sortOrder === "asc" ? "Düşükten Yükseğe" : "Yüksekten Düşüğe";
-            parts.push(`Sıralama: ${sortLabel} (${orderLabel})`);
+        if (socket !== "ALL") {
+            parts.push(`Soket: ${socket}`);
         }
 
         if (priceRange.length === 2) {
@@ -151,11 +147,20 @@ export default function PageHome() {
             }
         }
 
-        if (socket !== "ALL") {
-            parts.push(`Soket: ${socket}`);
+        if (sortField) {
+            const sortLabel =
+                sortField === "dc"
+                    ? "DC Fiyat"
+                    : sortField === "ac"
+                        ? "AC Fiyat"
+                        : "İsim";
+            const orderLabel = sortOrder === "asc" ? "Düşükten Yükseğe" : "Yüksekten Düşüğe";
+            parts.push(`Sıralama: ${sortLabel} (${orderLabel})`);
         }
 
-        return parts.join(" | ");
+        return parts.length ?
+            parts.join(" | ") :
+            "Filtre yok";
     }
 
     const priceListCells: Cell[] = [
@@ -163,18 +168,21 @@ export default function PageHome() {
             label: 'Firma',
             field: 'name',
             sort: true,
+            showTotal: true,
         },
         {
             label: 'AC Fiyat',
             field: 'ac',
             getReactElement: row => <>{NumberUtils.formatMoney(row.ac)}</>,
             sort: true,
+            showTotal: true,
         },
         {
             label: 'DC Fiyat',
             field: 'dc',
             getReactElement: row => <>{NumberUtils.formatMoney(row.dc)}</>,
             sort: true,
+            showTotal: true,
         },
     ];
 
@@ -187,7 +195,6 @@ export default function PageHome() {
                         aria-controls="panel1bh-content"
                         id="panel1bh-header"
                     >
-                        <Typography sx={{width: '33%'}}>Filtre</Typography>
                         <Typography sx={{color: 'text.secondary'}}>
                             {filtreToText()}
                         </Typography>
@@ -258,6 +265,7 @@ export default function PageHome() {
                     sortOrder={sortOrder}
                     handleRequestSort={handleRequestSort}
                     rows={initComplete && filteredRows}
+                    totalRow={priceTotal}
                     rowId={row => row.id}
                 />
             </Box>
