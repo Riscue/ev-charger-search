@@ -5,21 +5,21 @@ import {SortOrder} from "../components/shared/CustomTable";
 import {Socket} from "../page/PageHome";
 
 export const PriceAPI = {
-    getList: async function (): Promise<PriceDto[]> {
-        return await request({
+    getList: function (): Promise<PriceDto[]> {
+        return request({
             url: `/data`,
             method: "GET",
         });
     },
-    getSearchData: async function (shortId: string): Promise<SearchDto> {
-        return await request({
+    getSearchData: function (shortId: string): Promise<SearchDto> {
+        return request({
             url: `/searches/${shortId}`,
             method: "GET",
             throw: true,
         });
     },
-    save: async function (name: string, options: string[], sortField: string, sortOrder: SortOrder, priceRange: number[], socket: Socket): Promise<string> {
-        return await request({
+    save: function (name: string, options: string[], sortField: string, sortOrder: SortOrder, priceRange: number[], socket: Socket): Promise<string> {
+        return request({
             url: `/searches`,
             method: "POST",
             throw: true,
