@@ -67,7 +67,7 @@ ev-charger-search/
 - `PORT` - Sunucu portu (default: 4000)
 - `DB_FILE` - SQLite veritabanı dosya yolu (default: ./data.db)
 - `CACHE_DURATION` - Veri önbellekleme süresi (default: 24 saat)
-- `ADMIN_DEFAULT_PASSWORD` - Admin şifresi (production için zorunlu)
+- `ADMIN_DEFAULT_PASSWORD` - Admin şifresi
 - `NODE_ENV` - Environment modu (development/production/test)
 
 ## Frontend (React + Material-UI)
@@ -110,7 +110,7 @@ ev-charger-search/
 - Modern Material-UI arayüzü
 - Real-time veri güncelleme ve cache temizleme
 - Comprehensive form validasyonu
-- Toast notifications ve error handling
+- Error handling
 
 ## Veri Yapısı
 
@@ -262,7 +262,6 @@ Uygulama production ortamında tek bir Node.js sunucusu olarak çalışır:
 ## Önemli Notlar
 
 - Proje Türkçe dilinde geliştirilmiştir
-- **Production için zorunlu**: `ADMIN_DEFAULT_PASSWORD` environment değişkeni set edilmeli
 - Tüm environment değişkenleri validation'dan geçirilir
 - Veritabanı tabanlı fiyat yönetimi ile manuel kontrol mümkündür
 - Modüler mimari sayesinde kolayca genişletilebilir

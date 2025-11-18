@@ -102,15 +102,15 @@ class Environment {
         // Additional cross-field validations
         if (config.NODE_ENV === 'production') {
             if (!config.ADMIN_DEFAULT_PASSWORD) {
-                throw new Error('ADMIN_DEFAULT_PASSWORD is required in production environment.');
-            }
+                console.warn('ADMIN_DEFAULT_PASSWORD is required for admin account creation.');
+            } else {
+                if (config.ADMIN_DEFAULT_PASSWORD.length < 8) {
+                    console.warn('⚠️  Admin password should be at least 8 characters in production.');
+                }
 
-            if (config.ADMIN_DEFAULT_PASSWORD.length < 8) {
-                console.warn('⚠️  Admin password should be at least 8 characters in production.');
-            }
-
-            if (config.CACHE_DURATION < 60 * 60 * 1000) { // Less than 1 hour
-                console.warn('⚠️  Cache duration is very short for production. Consider increasing it for better performance.');
+                if (config.CACHE_DURATION < 60 * 60 * 1000) { // Less than 1 hour
+                    console.warn('⚠️  Cache duration is very short for production. Consider increasing it for better performance.');
+                }
             }
         }
 
@@ -139,7 +139,7 @@ class Environment {
     }
 
     public getAll(): Readonly<EnvironmentConfig> {
-        return { ...this.config };
+        return {...this.config};
     }
 
     public isProduction(): boolean {
@@ -159,4 +159,4 @@ class Environment {
 export const environment = new Environment();
 
 // Export types
-export type { EnvironmentConfig };
+export type {EnvironmentConfig};

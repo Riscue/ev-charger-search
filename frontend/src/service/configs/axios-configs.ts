@@ -1,17 +1,16 @@
 import axios, {AxiosError, AxiosRequestConfig, AxiosResponse, CreateAxiosDefaults} from "axios";
 import {HttpError} from "../../exceptions/HttpError";
-import {toast} from "react-toastify";
 
 const LOGIN_URL = process.env.REACT_APP_LOGIN_URL;
 
 function defaultErrorHandler(error: any) {
     if (!(error instanceof HttpError)) {
-        toast.error(error.message || 'Bilinmeyen hata!');
+        alert(error.message || 'Bilinmeyen hata!');
         throw error;
     }
     console.debug(error.response);
     console.error(error.response?.data?.error ?? error.message);
-    toast.error(error.message);
+    alert(error.message);
 }
 
 function responseHandler(response: AxiosResponse<any>) {
