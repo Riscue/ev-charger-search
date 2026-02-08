@@ -178,7 +178,8 @@ function configureAdminRoutes() {
     });
 
     adminRouter.put("/prices/:id", authMiddleware.authenticateBasic.bind(authMiddleware), async (req, res) => {
-        const {id} = req.params;
+        // @ts-ignore
+        const {id}: { id: string } = req.params;
         const {name, acPrice, dcPrice} = req.body;
 
         try {
@@ -191,7 +192,8 @@ function configureAdminRoutes() {
     });
 
     adminRouter.delete("/prices/:id", authMiddleware.authenticateBasic.bind(authMiddleware), async (req, res) => {
-        const {id} = req.params;
+        // @ts-ignore
+        const {id}: { id: string } = req.params;
 
         try {
             await adminService.deletePrice(parseInt(id));
